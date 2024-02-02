@@ -13,43 +13,30 @@ open class OpenApiGradlePlugin : Plugin<Project> {
 
 	override fun apply(project: Project) {
 		// Runtime dependencies on the following plugins
-		project.plugins.apply(SPRING_BOOT_PLUGIN)
-		project.plugins.apply(EXEC_FORK_PLUGIN)
+		project.plugins.apply("org.springframework.boot")
+		project.plugins.apply("com.github.psxpaul.execfork")
 
-		project.extensions.create(EXTENSION_NAME, OpenApiExtension::class.java)
-		project.tasks.register(FORKED_SPRING_BOOT_RUN_TASK_NAME, JavaExecFork::class.java)
-		project.tasks.register(OPEN_API_TASK_NAME, OpenApiGeneratorTask::class.java)
+		project.extensions.create("openApi", OpenApiExtension::class.java)
+		project.tasks.register("forkedSpringBootRun", JavaExecFork::class.java)
+		project.tasks.register("generateOpenApiDocs", OpenApiGeneratorTask::class.java)
 
 		generate(project)
 	}
 
 	private fun generate(project: Project) = project.run {
 		val tasksNames = tasks.names
-		val boot2TaskName = "bootRunMainClassName"
-		val boot3TaskName = "resolveMainClassName"
-		if (!tasksNames.contains(boot2TaskName) && tasksNames.contains(boot3TaskName)) {
-			tasks.register(boot2TaskName) { it.dependsOn(tasks.named(boot3TaskName)) }
+		if (!tasksNames.contains("bootRunMainClassName") && tasksNames.contains("resolveMainClassName")) {
+			tasks.register("bootRunMainClassName") { it.dependsOn(tasks.named("resolveMainClassName")) }
 		}
 
 		// The task, used to run the Spring Boot application (`bootRun`)
-		val bootRunTask = tasks.named(SPRING_BOOT_RUN_TASK_NAME)
+		val bootRunTask = tasks.named("bootRun")
 		// The task, used to resolve the application's main class (`bootRunMainClassName`)
-		val bootRunMainClassNameTask =
-			try {
-				val task = tasks.named(SPRING_BOOT_RUN_MAIN_CLASS_NAME_TASK_NAME)
-				logger.debug(
-					"Detected Spring Boot task {}",
-					SPRING_BOOT_RUN_MAIN_CLASS_NAME_TASK_NAME
-				)
-				task
-			} catch (e: UnknownDomainObjectException) {
-				val task = tasks.named(SPRING_BOOT_3_RUN_MAIN_CLASS_NAME_TASK_NAME)
-				logger.debug(
-					"Detected Spring Boot task {}",
-					SPRING_BOOT_3_RUN_MAIN_CLASS_NAME_TASK_NAME
-				)
-				task
-			}
+		val forkedDependency  = if (tasksNames.contains("bootRunMainClassName")) {
+			"bootRunMainClassName"
+		} else {
+			"bootRun"
+		}
 
 		val extension = extensions.findByName(EXTENSION_NAME) as OpenApiExtension
 		val customBootRun = extension.customBootRun
@@ -58,7 +45,7 @@ open class OpenApiGradlePlugin : Plugin<Project> {
 			FORKED_SPRING_BOOT_RUN_TASK_NAME,
 			JavaExecFork::class.java
 		) { fork ->
-			fork.dependsOn(tasks.named(bootRunMainClassNameTask.name))
+			fork.dependsOn(tasks.named(forkedDependency))
 			fork.onlyIf { needToFork(bootRunTask, customBootRun, fork) }
 		}
 
