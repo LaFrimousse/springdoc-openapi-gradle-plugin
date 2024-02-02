@@ -15,10 +15,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 import java.net.ConnectException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -27,6 +24,7 @@ import java.time.temporal.ChronoUnit.SECONDS
 
 private const val MAX_HTTP_STATUS_CODE = 299
 
+@UntrackedTask(because="never up to date")
 open class OpenApiGeneratorTask : DefaultTask() {
 	@get:Input
 	val apiDocsUrl: Property<String> = project.objects.property(String::class.java)
