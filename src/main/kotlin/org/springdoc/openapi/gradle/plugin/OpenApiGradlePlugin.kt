@@ -12,21 +12,24 @@ import org.springframework.boot.gradle.tasks.run.BootRun
 open class OpenApiGradlePlugin : Plugin<Project> {
 
 	override fun apply(project: Project) {
-		with(project) {
-			// Run time dependency on the following plugins
-			plugins.apply(SPRING_BOOT_PLUGIN)
-			plugins.apply(EXEC_FORK_PLUGIN)
+		// Runtime dependencies on the following plugins
+		project.plugins.apply(SPRING_BOOT_PLUGIN)
+		project.plugins.apply(EXEC_FORK_PLUGIN)
 
-			extensions.create(EXTENSION_NAME, OpenApiExtension::class.java)
-			tasks.register(FORKED_SPRING_BOOT_RUN_TASK_NAME, JavaExecFork::class.java)
-			tasks.register(OPEN_API_TASK_NAME, OpenApiGeneratorTask::class.java)
+		project.extensions.create(EXTENSION_NAME, OpenApiExtension::class.java)
+		project.tasks.register(FORKED_SPRING_BOOT_RUN_TASK_NAME, JavaExecFork::class.java)
+		project.tasks.register(OPEN_API_TASK_NAME, OpenApiGeneratorTask::class.java)
 
-			generate(this)
-		}
+		generate(project)
 	}
 
 	private fun generate(project: Project) = project.run {
-		springBoot3CompatibilityCheck()
+		val tasksNames = tasks.names
+		val boot2TaskName = "bootRunMainClassName"
+		val boot3TaskName = "resolveMainClassName"
+		if (!tasksNames.contains(boot2TaskName) && tasksNames.contains(boot3TaskName)) {
+			tasks.register(boot2TaskName) { it.dependsOn(tasks.named(boot3TaskName)) }
+		}
 
 		// The task, used to run the Spring Boot application (`bootRun`)
 		val bootRunTask = tasks.named(SPRING_BOOT_RUN_TASK_NAME)
@@ -67,15 +70,6 @@ open class OpenApiGradlePlugin : Plugin<Project> {
 
 		// The forked task need to be terminated as soon as my task is finished
 		forkedSpringBoot.get().stopAfter = openApiTask as TaskProvider<Task>
-	}
-
-	private fun Project.springBoot3CompatibilityCheck() {
-		val tasksNames = tasks.names
-		val boot2TaskName = "bootRunMainClassName"
-		val boot3TaskName = "resolveMainClassName"
-		if (!tasksNames.contains(boot2TaskName) && tasksNames.contains(boot3TaskName)) {
-		    tasks.register(boot2TaskName) { it.dependsOn(tasks.named(boot3TaskName)) }
-		}
 	}
 
 	private fun needToFork(
