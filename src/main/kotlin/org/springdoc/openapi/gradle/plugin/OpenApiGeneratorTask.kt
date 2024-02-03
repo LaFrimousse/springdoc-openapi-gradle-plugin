@@ -24,7 +24,7 @@ import java.time.temporal.ChronoUnit.SECONDS
 
 private const val MAX_HTTP_STATUS_CODE = 299
 
-@UntrackedTask(because="never up to date")
+//@UntrackedTask(because="never up to date")
 open class OpenApiGeneratorTask : DefaultTask() {
 	@get:Input
 	val apiDocsUrl: Property<String> = project.objects.property(String::class.java)
